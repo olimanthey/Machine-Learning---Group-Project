@@ -56,12 +56,27 @@ marine_db <- read_csv("marine_engine_data.csv")
 
 ## Data cleaning
 The raw dataset often contains inconsistencies, missing values, or formatting issues that can negatively impact model performance. In this section, we detail the steps taken to preprocess and clean the data, ensuring it is suitable for subsequent analysis and modeling tasks.
+
 ```{r}
 #| message: false
 #| error: false
 
-library(dplyr)
+library(dplyr) # Data manipulation
+library(tidyverse)
+library(lubridate)
 
+# Convert "timestamp" column to datetime
+marine_db <- marine_db %>%
+  mutate(timestamp = ymd(timestamp))
+
+# Count missing values per column
+missing_value <- marine_db %>%
+  summaries(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), name_to = "Column", value_to = "Missing_count") %>%
+  arrange(desc(Missing_count))
+
+# Display the result
+missing_value
 ```
 
 # EDA
