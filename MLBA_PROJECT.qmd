@@ -1,0 +1,76 @@
+---
+title: "Marine Engine Preventive Maintenance Analysis"
+author: "Olivier Manthey Salma Fourati Axel Lo Schiavo"
+date: "Mai 2025"
+format:
+  html:
+    css: "styles.css"
+    self-contained: true
+    code-fold: true
+    code-summary: "Code"
+    warning: false
+    message: false
+    toc: true
+    toc-location: right
+    toc-depth: 3
+editor: visual
+---
+# Abstact
+Summary of the paper including the main results.
+
+# Introduction
+Context and objective of the study
+
+# Literature review
+State of the art, previous works, and appropriate citations
+
+# Methodology
+Methods and models that are used in the paper
+
+# Data Preparation
+## Import the dataset
+```{r}
+#| message: false
+#| error: false 
+# Use conda environement for the analysis
+library(reticulate)
+use_condaenv('MLBA')
+```
+
+```{r}
+#| message: false
+#| error: false 
+
+library(readr)
+
+# Open the marine engine dataset
+marine_db <- read_csv("marine_engine_data.csv")
+```
+
+## Data cleaning
+
+# EDA
+
+
+# Supervised Learning Analysis
+## Data Splitting
+
+## Suport Vector Machine
+
+## Random Forest
+
+## Metrics Analysis
+
+### Tuning of Hyperparameters
+
+# Unsupervised Learning Analysis
+## Dimension Reduction
+
+# Results
+
+# Conclusion
+
+# References
+
+
+
