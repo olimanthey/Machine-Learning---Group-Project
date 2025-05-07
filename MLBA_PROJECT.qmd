@@ -141,11 +141,19 @@ library(GGally)
 
 ## **3.1 Data Distribution of Predictive Features (X)**
 
+------------------------------------------------------------------------
+
 ## **3.2 Correlation Heatmap: Relationship Between Variables of Interest**
+
+------------------------------------------------------------------------
 
 ## **3.3 Target Variables (Y) vs. Predictive Features (X)**
 
+------------------------------------------------------------------------
+
 ## **3.4 Relationship between variables of interest**
+
+------------------------------------------------------------------------
 
 # **4. Unsupervised Learning**
 
@@ -154,6 +162,8 @@ library(GGally)
 Methods and models that are used in the paper
 
 ## 5.1 Supervised Learning Analysis
+
+------------------------------------------------------------------------
 
 ### 5.1.1 Suport Vector Machine
 
