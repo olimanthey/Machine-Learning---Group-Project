@@ -39,7 +39,9 @@ sum(is.na(marine_db)) # 0
 # Check for duplicate values 
 sum(duplicated(marine_db)) # 0
 
-## ########################################
+# The data has no missing values and no duplicates. The preprocessing process consited in factorizing categorical values.
+
+##########################################
 ## Univariate: Exploration of each variables
 db_sum <- dfSummary(marine_db, max.distinct.values = 5)
 db_sum %>% view()
@@ -50,20 +52,5 @@ describe(marine_db, omit=TRUE, skew=FALSE, IQR = TRUE)
 ## More summary using the R base function
 summary(marine_db)
 
-## ##########################################
-## Bivariate: Exploration of dependence with the outcome (maintenance_status)
 
-## Global summary per maintenance_status
-db_sum_main <- marine_db %>% group_by(maintenance_status) %>% dfSummary(max.distinct.values = 5)
-db_sum_main %>% view()
 
-## Numbers
-## Summary statistics per maintenance_status
-## Caution: cat are also included
-describe(marine_db~maintenance_status, skew=FALSE, IQR = TRUE)
-
-## Graphs
-## num*cat: several histograms
-ggplot(marine_db, aes(x = engine_temp)) +
-  geom_histogram(fill = "white", colour = "black") +
-  facet_grid(maintenance_status ~ .)

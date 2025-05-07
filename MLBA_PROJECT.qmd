@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ---
 title: "Marine Engine Preventive Maintenance Analysis"
 author: "Olivier Manthey Salma Fourati Axel Lo Schiavo"
@@ -37,13 +36,13 @@ Context and objective of the study
 
 ------------------------------------------------------------------------
 
+State of the art, previous works, and appropriate citations
+
 ## 1.4 Research Question
 
 ------------------------------------------------------------------------
 
 # 2. Data
-
-State of the art, previous works, and appropriate citations
 
 ## 2.1 Sources
 
@@ -81,7 +80,7 @@ As already introduced, our research utilizes the “Marine Engines” database o
 
 [maintenance_status]{style="background-color:#f3f0ff; color:#7b2cbf; font-weight:bold; padding:2px 6px; border-radius:4px; font-family:monospace;"}: Indicates whether the engine requires maintenance, is in normal condition, or is critical.
 
-[failure_mode]{style="background-color:#f3f0ff; color:#7b2cbf; font-weight:bold; padding:2px 6px; border-radius:4px; font-family:monospace;"}: Categorical variable describing the cause of engine failure.
+[**failure_mode**]{style="background-color:#f3f0ff; color:#7b2cbf; font-weight:bold; padding:2px 6px; border-radius:4px; font-family:monospace;"}: Categorical variable describing the cause of engine failure (e.g., Mechanical Wear, Oil Leakage, No Failure).
 
 [engine_type]{style="background-color:#f3f0ff; color:#7b2cbf; font-weight:bold; padding:2px 6px; border-radius:4px; font-family:monospace;"}: Classification of the engine (e.g., 2-stroke, 4-stroke, high-speed, low-speed).
 
@@ -179,109 +178,3 @@ Methods and models that are used in the paper
 # 7. Conclusion
 
 # 8. References
-=======
----
-title: "Marine Engine Preventive Maintenance Analysis"
-author: "Olivier Manthey Salma Fourati Axel Lo Schiavo"
-date: "Mai 2025"
-format:
-  html:
-    css: "styles.css"
-    self-contained: true
-    code-fold: true
-    code-summary: "Code"
-    warning: false
-    message: false
-    toc: true
-    toc-location: right
-    toc-depth: 3
-editor: visual
----
-
-# Abstact
-
-Summary of the paper including the main results.
-
-# Introduction
-
-Context and objective of the study
-
-# Literature review
-
-State of the art, previous works, and appropriate citations
-
-# Methodology
-
-Methods and models that are used in the paper
-
-# Data Preparation
-
-## Import the dataset
-
-```{r}
-#| message: false
-#| error: false 
-# Use conda environement for the analysis
-library(reticulate)
-use_condaenv('MLBA')
-```
-
-```{r}
-#| message: false
-#| error: false 
-
-library(readr)
-
-# Open the marine engine dataset
-marine_db <- read_csv("marine_engine_data.csv")
-```
-
-## Data cleaning
-The raw dataset often contains inconsistencies, missing values, or formatting issues that can negatively impact model performance. In this section, we detail the steps taken to preprocess and clean the data, ensuring it is suitable for subsequent analysis and modeling tasks.
-
-```{r}
-#| message: false
-#| error: false
-
-library(dplyr) # Data manipulation
-library(tidyverse)
-library(lubridate)
-
-# Convert "timestamp" column to datetime
-marine_db <- marine_db %>%
-  mutate(timestamp = ymd(timestamp))
-
-# Count missing values per column
-missing_value <- marine_db %>%
-  summaries(across(everything(), ~ sum(is.na(.)))) %>%
-  pivot_longer(everything(), name_to = "Column", value_to = "Missing_count") %>%
-  arrange(desc(Missing_count))
-
-# Display the result
-missing_value
-```
-
-# EDA
-
-# Supervised Learning Analysis
-
-## Data Splitting
-
-## Suport Vector Machine
-
-## Random Forest
-
-## Metrics Analysis
-
-### Tuning of Hyperparameters
-
-# Unsupervised Learning Analysis
-
-## Dimension Reduction
-
-# Results
-
-# Conclusion
-
-# References
->>>>>>> 201d17d5434864d55901e141aea32bfa322a8dd5

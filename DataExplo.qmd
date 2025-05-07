@@ -1,0 +1,159 @@
+---
+title: "DataExplo"
+format: html
+editor: visual
+---
+
+```{r}
+library(readr)
+library(liver)
+library(summarytools)
+library(dplyr)
+library(psych)
+library(ggplot2)
+library(ggmosaic)
+library(GGally)
+library(patchwork)
+
+# Open the marine engine dataset
+marine_db <- read_csv("marine_engine_data.csv")
+
+str(marine_db)
+```
+
+# Preprocessing
+
+## Conversion
+
+```{r}
+# Convert character columns to factors
+for (i in 1:ncol(marine_db)) {
+  if (is.character(marine_db[[i]])) {
+    marine_db[[i]] <- as.factor(marine_db[[i]])
+  }
+}
+
+# Reorder factor levels by decreasing frequency
+for (i in 1:ncol(marine_db)) {
+  if (is.factor(marine_db[[i]])) {
+    marine_db[[i]] <- reorder(marine_db[[i]], marine_db[[i]], FUN = length)
+  }
+}
+
+# Convert to Date class
+marine_db$timestamp <- as.Date(marine_db$timestamp)
+
+str(marine_db)
+```
+
+## Missing values
+
+```{r}
+sum(is.na(marine_db))
+```
+
+## Duplicate values
+
+```{r}
+sum(duplicated(marine_db))
+```
+
+The data has no missing values and no duplicates. The preprocessing process consited in factorizing categorical values.
+
+# Univariate analysis: Exploration of each variables
+
+```{r}
+db_sum <- dfSummary(marine_db, max.distinct.values = 5)
+db_sum %>% view()
+```
+
+## Numerical variables
+
+| Variable | Key Findings |
+|----|----|
+| `engine_temp` | Well-distributed (Mean: 85.1, SD: 7.2). No concerns. |
+| `oil_pressure` | Skewed slightly right. Wide spread, many distinct values. |
+| `fuel_consumption` | Very high variability (SD: 2439.4) → possible outliers or skew. |
+| `vibration_level` | Clean, narrow distribution. |
+| `rpm` | Wide range (732 to 2205). CV = 0.1 → reasonably stable. |
+| `engine_load` | CV = 0.3 → some variation, likely useful. |
+| `coolant_temp` | CV = 0.1 → good spread. |
+| `exhaust_temp` | Almost constant (IQR = 0, 162 unique values) → ⚠️ not informative. |
+| `running_period` | High CV (1.0) → consider transformation. |
+| `fuel_consumption_per_hour` | Very low variance (Mean = 100 for all) → ❌ likely useless. |
+
+## Categorical variables
+
+| Variable | Key Observations |
+|----|----|
+| `maintenance_status` | Balanced across 3 classes (\~33% each) → ✅ ideal for classification. |
+| `failure_mode` | Spread across 4 modes, no dominant class → ✅ predictive potential. |
+| `engine_type` | Fairly balanced among 4 types. |
+| `fuel_type` | Slight imbalance: Diesel (59%) vs HFO (41%). |
+| `manufacturer` | Most common: MAN B&W (30%), rest evenly spread. |
+
+## Date variable
+
+-   `timestamp`: Weekly granularity
+
+-   Range: **2023-01-01** to **2024-12-22** (almost 2 years)
+
+## Recommendations
+
+-   Drop or exclude:
+
+    -   `fuel_consumption_per_hour` (constant)
+
+    -   `exhaust_temp` (low variation)
+
+-   Scale/transform:
+
+    -   `fuel_consumption`, `rpm`, `running_period`
+
+-   Balanced classification target (`maintenance_status`) → good foundation for modeling
+
+# Bivariate analysis
+
+Predictive variable distribution according to maintenance status.
+
+```{r}
+# List of numeric columns
+numeric_vars <- marine_db %>% select(where(is.numeric)) %>% names()
+
+# Generate each plot with reduced title size and simpler styling
+plot_list <- lapply(numeric_vars, function(var) {
+  ggplot(marine_db, aes(x = .data[[var]], fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    theme_minimal(base_size = 7) +
+    labs(title = paste(var, "by Status"), x = NULL, y = NULL) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "none",  # We'll show one legend at the end
+      plot.title = element_text(size = 10)
+    )
+})
+
+# Combine the plots
+main_plot <- wrap_plots(plotlist = plot_list, ncol = 3) + 
+  plot_layout(guides = "collect") & 
+  theme(
+    legend.position = "right",
+    legend.direction = "vertical",
+    legend.box = "vertical",
+    legend.title = element_text(size = 6, face = "bold"),
+    legend.text = element_text(size = 6)
+  ) &
+  labs(fill = "Maintenance Status")
+
+# Add an overall title using `plot_annotation()`
+final_plot <- main_plot + 
+  plot_annotation(
+    title = "Distribution of Each Numerical Variable Grouped by Maintenance Status",
+    theme = theme(
+      plot.title = element_text(size = 12, face = "bold", hjust = 0.5)
+    )
+  )
+
+# Show the final plot
+print(final_plot)
+```
