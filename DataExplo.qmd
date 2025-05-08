@@ -71,7 +71,7 @@ db_sum %>% View()
 ## Numerical variables
 
 | Variable | Key Findings |
-|----|----|
+|------------------------------------|------------------------------------|
 | `engine_temp` | Well-distributed (Mean: 85.1, SD: 7.2). No concerns. |
 | `oil_pressure` | Skewed slightly right. Wide spread, many distinct values. |
 | `fuel_consumption` | Very high variability (SD: 2439.4) → possible outliers or skew. |
@@ -86,7 +86,7 @@ db_sum %>% View()
 ## Categorical variables
 
 | Variable | Key Observations |
-|----|----|
+|------------------------------------|------------------------------------|
 | `maintenance_status` | Balanced across 3 classes (\~33% each) → ✅ ideal for classification. |
 | `failure_mode` | Spread across 4 modes, no dominant class → ✅ predictive potential. |
 | `engine_type` | Fairly balanced among 4 types. |
@@ -123,7 +123,7 @@ maintenance_counts <- marine_db %>%
          label = paste0(round(perc, 1), "%"))
 
 # Fancy bar plot
-ggplot(maintenance_counts, aes(x = maintenance_status, y = n, fill = maintenance_status)) +
+final_barplot <- ggplot(maintenance_counts, aes(x = maintenance_status, y = n, fill = maintenance_status)) +
   geom_bar(stat = "identity", width = 0.8, alpha = 0.95) +
   geom_text(aes(label = label), vjust = -0.8, size = 3) +
   scale_fill_manual(values = c(
@@ -145,6 +145,9 @@ ggplot(maintenance_counts, aes(x = maintenance_status, y = n, fill = maintenance
     panel.grid.minor = element_blank(),
     legend.position = "none"
   )
+
+# Save as PNG
+ggsave("maintenance_status_distr.png", plot = final_barplot, width = 6, height = 4, dpi = 300)
 ```
 
 # 2. Bivariate analysis
@@ -190,7 +193,10 @@ final_plot <- main_plot +
   )
 
 # Show the final plot
-print(final_plot)
+final_plot
+
+# Save as PNG
+ggsave("Distribution_num_var.png", plot = final_plot, width = 6, height = 4, dpi = 300)
 ```
 
 `engine_temp`
@@ -301,6 +307,9 @@ final_plot <- main_plot +
 
 # Show the final plot
 print(final_plot)
+
+# Save as PNG
+ggsave("Distribution_cat_var.png", plot = final_plot, width = 6, height = 4, dpi = 300)
 ```
 
 `failure_mode`
@@ -348,7 +357,7 @@ cor_long <- as.data.frame(as.table(cor_matrix)) %>%
   rename(Var1 = Var1, Var2 = Var2, Correlation = Freq)
 
 # Create heatmap
-ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
+heatmap <- ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
   geom_tile(color = "white") +
   geom_text(aes(label = Correlation), size = 3, color = "black") +
   scale_fill_gradient2(low = "#B2182B", high = "#2166AC", mid = "white",
@@ -359,6 +368,9 @@ ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold")
   )
+
+# Save as PNG
+ggsave("correlation_heat_map.png", plot = heatmap, width = 6, height = 4, dpi = 300)
 ```
 
 Strong Positive Correlations
@@ -589,12 +601,11 @@ table(marine_db$outlier_flag)
 
 1.  **Feature Selection & Reduction**
     -   Drop constant or low-variance variables: `fuel_consumption_per_hour`, `exhaust_temp`
-    -   Consider removing `engine_id` (non-informative identifier)
+    -   Consider removing `engine_id` and `tempstamp`(non-informative)
+    -   Transform categorical variables for one-hot encoding or target encoding
+    -   See how features behave with one another
 2.  **Outlier Strategy**
     -   Retain meaningful outliers in `vibration_level` and `engine_temp` (potential early warning signs)
     -   Consider log transformation for skewed variables like `fuel_consumption`
-3.  **Feature Engineering**
-    -   Derive `fuel_efficiency = fuel_consumption / running_period`
-    -   Encode `failure_mode` and `manufacturer` using one-hot or target encoding
-4.  **Modeling**
+3.  **Modeling**
     -   Consider unsupervised learning.
