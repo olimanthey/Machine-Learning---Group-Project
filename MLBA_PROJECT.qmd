@@ -92,7 +92,7 @@ As already introduced, our research utilizes the “Marine Engines” database o
 
 Exploratory Data Analysis (EDA) is a critical step in understanding the structure, patterns, and relationships within a dataset. By combining statistical summaries and visualizations, EDA reveals trends, anomalies, and key insights that inform subsequent modeling efforts. In this section, we analyze the dataset related to the maintenance status of marine engines, aiming to uncover the specific characteristics and behaviors of relevant features. The analysis will focus on how various features influence maintenance outcomes, providing a solid foundation for predictive modeling.
 
-## **3.1 Data Distribution** 
+## **3.1 Data Distribution**
 
 ------------------------------------------------------------------------
 
