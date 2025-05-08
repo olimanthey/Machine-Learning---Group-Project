@@ -48,7 +48,7 @@ State of the art, previous works, and appropriate citations
 
 ------------------------------------------------------------------------
 
-As already introduced, our research utilizes the “Marine Engines” database owned by *Fijabi J. Adekunle* and hosted on Kaggle, with simulated records from 50 marine engines totalising 5200 instances. This dataset, provided in CSV format, will be used for our analysis aimed at modeling maintenance status for marine engines.
+As already introduced, our research utilizes the “Marine Engines” database owned by *Fijabi J. Adekunle* and hosted on Kaggle, with simulated records from 50 marine engines totalising 5200 instances. This dataset, provided in .CSV format, will be used for our analysis aimed at modeling maintenance status for marine engines.
 
 ## 2.2 Description
 
@@ -97,15 +97,10 @@ As already introduced, our research utilizes the “Marine Engines” database o
 ```{r}
 #| message: false
 #| error: false 
+
 # Use conda environement for the analysis
 library(reticulate)
 use_condaenv('MLBA')
-```
-
-```{r}
-#| message: false
-#| error: false 
-
 library(readr)
 
 # Open the marine engine dataset
@@ -190,4 +185,3 @@ Methods and models that are used in the paper
 # 7. Conclusion
 
 # \# 8. References
-
