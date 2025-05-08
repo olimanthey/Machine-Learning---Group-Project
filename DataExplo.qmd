@@ -71,7 +71,7 @@ db_sum %>% View()
 ## Numerical variables
 
 | Variable | Key Findings |
-|------------------------------------|------------------------------------|
+|----|----|
 | `engine_temp` | Well-distributed (Mean: 85.1, SD: 7.2). No concerns. |
 | `oil_pressure` | Skewed slightly right. Wide spread, many distinct values. |
 | `fuel_consumption` | Very high variability (SD: 2439.4) → possible outliers or skew. |
@@ -86,7 +86,7 @@ db_sum %>% View()
 ## Categorical variables
 
 | Variable | Key Observations |
-|------------------------------------|------------------------------------|
+|----|----|
 | `maintenance_status` | Balanced across 3 classes (\~33% each) → ✅ ideal for classification. |
 | `failure_mode` | Spread across 4 modes, no dominant class → ✅ predictive potential. |
 | `engine_type` | Fairly balanced among 4 types. |
