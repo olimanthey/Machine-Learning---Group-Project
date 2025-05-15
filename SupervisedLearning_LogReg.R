@@ -67,6 +67,28 @@ baseline_preds_te <- predict(baseline_model, newdata = marine_te)
 confusionMatrix(baseline_preds_tr, marine_tr$maintenance_status)
 confusionMatrix(baseline_preds_te, marine_te$maintenance_status)
 
+################ LASSO & RIDGE regression
+
+set.seed(123)
+baseline_model_2 <- train(
+  maintenance_status ~.,
+  data = marine_tr,
+  method= "glmnet", # add L1 (LASSO) and L2 (RIDGE)
+  trControl = ctrl,
+  preProcess = c("center", "scale"), # Features scaling
+  trace = FALSE
+)
+
+# Predict on test set
+baseline_preds_tr_2 <- predict(baseline_model_2, newdata = marine_tr)
+baseline_preds_te_2 <- predict(baseline_model_2, newdata = marine_te)
+
+# Evaluate
+confusionMatrix(baseline_preds_tr_2, marine_tr$maintenance_status)
+confusionMatrix(baseline_preds_te_2, marine_te$maintenance_status)
+
+
+
 # No overfitting
 
 # The baseline multinomial logistic regression model, applied to the marine engine dataset with 
