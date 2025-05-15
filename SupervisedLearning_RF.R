@@ -1,10 +1,6 @@
-reticulate::use_condaenv("MLBA")
 library(randomForest)
-library(tidyverse)
-library(dplyr)
-library(caret)
-library(nnet)
 library(ggplot2)
+library(dplyr)
 
 marine_db <- read.csv("marine_engine_data.csv")
 
@@ -24,76 +20,133 @@ for (i in 1:ncol(marine_db)) {
 }
 
 # Delete unwanted columns
-rf_db <- marine_db %>%
-  select(-timestamp, -engine_id)
-
-# Delete columns that where not meaningful after EDA
-rf_db <- rf_db %>%
-  select(-failure_mode, -engine_type, -manufacturer, -fuel_type, 
+marine_db_filtered <- marine_db %>%
+  select(-timestamp, -engine_id, -failure_mode, -engine_type, -manufacturer, -fuel_type, 
          -fuel_consumption_per_hour, -exhaust_temp, -oil_pressure)
 
-################# Baseline Model
-
 # Confirm target is a factor
-rf_db$maintenance_status <- as.factor(rf_db$maintenance_status)
+marine_db_filtered$maintenance_status <- as.factor(marine_db_filtered$maintenance_status)
 
-# Train/Test Split
+################# 
+
+# Trouver manuellement le nbr d'arbres pour notre modèle
 set.seed(123)
-trainIndex <- createDataPartition(rf_db$maintenance_status, p = 0.8, list = FALSE)
-marine_tr <- rf_db[trainIndex, ]
-marine_te  <- rf_db[-trainIndex, ]
+trainIndex <- createDataPartition(marine_db_filtered$maintenance_status, p = 0.8, list = FALSE)
+marine_tr <- marine_db_filtered[trainIndex, ]
+marine_te  <- marine_db_filtered[-trainIndex, ]
 
-# 10-Fold Cross-Validation Setup
-ctrl <- trainControl(method = "cv", number = 10)
+ntrees <- c(100, 300, 500, 800, 1000)
+results_ntree <- data.frame()
 
-############################ Random Forest
+for (nt in ntrees) {
+  model <- randomForest(maintenance_status ~ ., data = marine_tr, ntree = nt)
+  acc <- mean(predict(model, marine_te) == marine_te$maintenance_status)
+  results_ntree <- rbind(results_ntree, data.frame(ntree = nt, Accuracy = acc))
+}
 
-# Define tuning grid manually
-mtry_vals <- c(2, 4, 6)
-ntree_vals <- c(100, 300, 500, 1000)
+# 📈 Graph
+ggplot(results_ntree, aes(x = ntree, y = Accuracy)) +
+  geom_line() + geom_point() +
+  labs(title = "Tuning de ntree", x = "Nombre d'arbres", y = "Accuracy") +
+  theme_minimal()
 
-# Initialize results list
-results <- data.frame()
+best_ntree <- results_ntree$ntree[which.max(results_ntree$Accuracy)]
 
-# Loop through combinations
-set.seed(123)
-for (nt in ntree_vals) {
-  for (m in mtry_vals) {
-    rf_model <- randomForest(
-      maintenance_status ~ ., 
-      data = marine_tr, 
-      mtry = m, 
-      ntree = nt,
-      trControl = ctrl,
-      importance = TRUE
+# Confirmation du résultat en regardant les erreurs
+set.seed(42)
+
+model <- randomForest(maintenance_status ~ ., data=marine_tr, ntrees = 1000, importance=TRUE)
+
+model
+
+## Now check to see if the random forest is actually big enough...
+## Up to a point, the more trees in the forest, the better. You can tell when
+## you've made enough when the OOB no longer improves.
+oob.error.data <- data.frame(
+  Trees=rep(1:nrow(model$err.rate), times=4),
+  Type=rep(c("OOB", "Normal", "Critical", "Requires Maintenance"), each=nrow(model$err.rate)),
+  Error=c(model$err.rate[,"OOB"], 
+          model$err.rate[,"Normal"], 
+          model$err.rate[,"Critical"],
+          model$err.rate[,"Requires Maintenance"]))
+
+ggplot(data=oob.error.data, aes(x=Trees, y=Error)) +
+  geom_line(aes(color=Type))
+# ggsave("oob_error_rate_500_trees.pdf")
+
+## Green line = The error rate when classifying "Normal" maintenance status
+##
+## Blue line = The overall OOB error rate.
+##
+## Red line = The error rate when classifying "Critical" maintenance status
+##
+## Purple line = The error rate when classifying "Requires Maintenance" maintenance status
+# --> 300 trees optimal
+best_ntree <- 300
+
+################# mtrys optimal
+
+mtrys <- 1:(ncol(marine_tr) - 1)
+results_mtry <- data.frame()
+
+for (m in mtrys) {
+  model <- randomForest(maintenance_status ~ ., data = marine_tr, mtry = m, ntree = best_ntree)
+  acc <- mean(predict(model, marine_te) == marine_te$maintenance_status)
+  results_mtry <- rbind(results_mtry, data.frame(mtry = m, Accuracy = acc))
+}
+
+# 📈 Graph
+ggplot(results_mtry, aes(x = mtry, y = Accuracy)) +
+  geom_line() + geom_point() +
+  labs(title = "Tuning de mtry", x = "mtry", y = "Accuracy") +
+  theme_minimal()
+
+best_mtry <- results_mtry$mtry[which.max(results_mtry$Accuracy)]
+
+################# nodesize & maxnodes optimal
+
+nodesize_vals <- c(1, 3, 5, 10, 20)
+maxnodes_vals <- c(10, 20, 30, 50, 100)
+results_final <- data.frame()
+
+for (ns in nodesize_vals) {
+  for (mx in maxnodes_vals) {
+    model <- randomForest(
+      maintenance_status ~ ., data = marine_tr,
+      ntree = best_ntree, mtry = best_mtry,
+      nodesize = ns, maxnodes = mx
     )
-    
-    preds <- predict(rf_model, newdata = marine_te)
-    acc <- mean(preds == marine_te$maintenance_status)
-    
-    results <- rbind(results, data.frame(mtry = m, ntree = nt, Accuracy = acc))
+    acc <- mean(predict(model, marine_te) == marine_te$maintenance_status)
+    results_final <- rbind(results_final, data.frame(nodesize = ns, maxnodes = mx, Accuracy = acc))
   }
 }
 
-ggplot(results, aes(x = ntree, y = Accuracy, color = as.factor(mtry), group = mtry)) +
-  geom_line() +
-  geom_point(size = 2) +
-  labs(title = "Accuracy vs. Number of Trees by mtry",
-       x = "Number of Trees (ntree)",
-       y = "Accuracy",
-       color = "mtry") +
+# 📈 Heatmap
+ggplot(results_final, aes(x = factor(nodesize), y = factor(maxnodes), fill = Accuracy)) +
+  geom_tile() +
+  geom_text(aes(label = round(Accuracy, 3)), color = "black") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(
+    title = "Tuning de nodesize et maxnodes",
+    x = "nodesize",
+    y = "maxnodes"
+  ) +
   theme_minimal()
 
-#################
+best_nodesize <- results_final$nodesize[which.max(results_final$Accuracy)]
+best_maxnodes <- results_final$maxnodes[which.max(results_final$Accuracy)]
 
-# Train Random Forest model
+################ Modèle optimal
+
+# Train OPtimal Random Forest model
 set.seed(123)
 rf_model <- randomForest(
   maintenance_status ~ ., 
   data = marine_tr,
-  mtry = 6, 
-  ntree = 500,
-  trControl = ctrl,
+  mtry = best_mtry, 
+  ntree = best_ntree,
+  nodesize = best_nodesize,
+  maxnodes = best_maxnodes,
   importance = TRUE
 )
 
@@ -107,41 +160,8 @@ rf_preds_te <- predict(rf_model, newdata = marine_te)
 # Confusion matrix and stats
 confusionMatrix(rf_preds_tr, marine_tr$maintenance_status)
 confusionMatrix(rf_preds_te, marine_te$maintenance_status)
-# High overfitting
+# Low overfitting
 
 # Extract variable importance
 varImpPlot(rf_model)
 importance(rf_model)
-
-# Resolve Overfitting
-# Keep variables with >0 importance score
-marine_tr_reduced <- marine_tr %>%
-  select(maintenance_status, rpm, engine_temp)
-
-set.seed(123)
-rf_pruned <- randomForest(
-  maintenance_status ~ ., 
-  data = marine_tr_reduced,
-  ntree = 500,
-  mtry = 2,
-  importance = TRUE
-)
-
-# Evaluate
-train_preds <- predict(rf_pruned, newdata = marine_tr_reduced)
-test_preds <- predict(rf_pruned, newdata = marine_te)
-
-confusionMatrix(train_preds, marine_tr_reduced$maintenance_status)
-confusionMatrix(test_preds, marine_te$maintenance_status)
-
-
-
-# The Random Forest model performed poorly on the marine engine dataset, yielding an overall 
-# accuracy of 32.4%, with a Kappa of –0.0142, indicating worse-than-random agreement. 
-# Sensitivity across classes remained low: 27.1% for "Normal", 34.2% for "Critical", and 35.9% 
-# for "Requires Maintenance", with similar patterns in precision and specificity. 
-# The balanced accuracy hovered near 50% for all classes, suggesting the model was unable to 
-# effectively distinguish between the three maintenance categories. Despite Random Forest’s 
-# ability to capture non-linear relationships, its failure here indicates limited predictive 
-# signal in the available features, reinforcing the need for either more informative variables 
-# or more powerful models like XGBoost to capture subtle patterns in the data.
