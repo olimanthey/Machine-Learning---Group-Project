@@ -54,7 +54,7 @@ confusionMatrix(rf_preds_te, marine_te$maintenance_status)
 ################# Hyperparameters tuning
 
 # Trouver manuellement le nbr d'arbres pour notre modèle
-
+set.seed(123)
 # Set up cross-validation
 ctrl <- trainControl(method = "cv", number = 10)  # 5-fold CV
 
