@@ -29,6 +29,12 @@ marine_db_filtered <- marine_db %>%
 # Confirm target is a factor
 marine_db_filtered$maintenance_status <- as.factor(marine_db_filtered$maintenance_status)
 
+# Data Splitting
+set.seed(123)
+trainIndex <- createDataPartition(marine_db_filtered$maintenance_status, p = 0.8, list = FALSE)
+marine_tr <- marine_db_filtered[trainIndex, ]
+marine_te  <- marine_db_filtered[-trainIndex, ]
+
 ################# Baseline model
 
 set.seed(678)
@@ -48,10 +54,6 @@ confusionMatrix(rf_preds_te, marine_te$maintenance_status)
 ################# Hyperparameters tuning
 
 # Trouver manuellement le nbr d'arbres pour notre modèle
-set.seed(123)
-trainIndex <- createDataPartition(marine_db_filtered$maintenance_status, p = 0.8, list = FALSE)
-marine_tr <- marine_db_filtered[trainIndex, ]
-marine_te  <- marine_db_filtered[-trainIndex, ]
 
 # Set up cross-validation
 ctrl <- trainControl(method = "cv", number = 10)  # 5-fold CV
