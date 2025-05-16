@@ -1,6 +1,8 @@
 library(randomForest)
 library(ggplot2)
 library(dplyr)
+library(caret)
+library(pdp)
 
 marine_db <- read.csv("marine_engine_data.csv")
 
@@ -27,7 +29,23 @@ marine_db_filtered <- marine_db %>%
 # Confirm target is a factor
 marine_db_filtered$maintenance_status <- as.factor(marine_db_filtered$maintenance_status)
 
-################# 
+################# Baseline model
+
+set.seed(678)
+
+baseline_model <- randomForest(maintenance_status ~ ., data=marine_tr, importance=TRUE)
+
+baseline_model
+
+# Predict on training & test set
+baseline_rf_preds_tr <- predict(baseline_model, newdata = marine_tr)
+baseline_rf_preds_te <- predict(baseline_model, newdata = marine_te)
+
+# Confusion matrix and stats
+confusionMatrix(rf_preds_tr, marine_tr$maintenance_status)
+confusionMatrix(rf_preds_te, marine_te$maintenance_status)
+
+################# Hyperparameters tuning
 
 # Trouver manuellement le nbr d'arbres pour notre modèle
 set.seed(123)
@@ -35,27 +53,49 @@ trainIndex <- createDataPartition(marine_db_filtered$maintenance_status, p = 0.8
 marine_tr <- marine_db_filtered[trainIndex, ]
 marine_te  <- marine_db_filtered[-trainIndex, ]
 
-ntrees <- c(100, 300, 500, 800, 1000)
-results_ntree <- data.frame()
+# Set up cross-validation
+ctrl <- trainControl(method = "cv", number = 10)  # 5-fold CV
 
-for (nt in ntrees) {
-  model <- randomForest(maintenance_status ~ ., data = marine_tr, ntree = nt)
-  acc <- mean(predict(model, marine_te) == marine_te$maintenance_status)
-  results_ntree <- rbind(results_ntree, data.frame(ntree = nt, Accuracy = acc))
+# Define grid of mtry and ntree
+mtry_vals <- 1:(ncol(marine_tr) - 1)
+ntree_vals <- c(100, 300, 500, 800, 1000)
+
+# Use expand.grid to create all combinations
+grid <- expand.grid(mtry = mtry_vals, ntree = ntree_vals)
+
+# Custom training loop for grid search (caret doesn't natively tune ntree via tuneGrid)
+results_grid <- data.frame()
+
+for (i in 1:nrow(grid)) {
+  m <- grid$mtry[i]
+  nt <- grid$ntree[i]
+  
+  model <- train(
+    maintenance_status ~ .,
+    data = marine_tr,
+    method = "rf",
+    trControl = ctrl,
+    tuneGrid = data.frame(mtry = m),
+    ntree = nt
+  )
+  
+  acc <- max(model$results$Accuracy)
+  results_grid <- rbind(results_grid, data.frame(mtry = m, ntree = nt, Accuracy = acc))
 }
 
-# 📈 Graph
-ggplot(results_ntree, aes(x = ntree, y = Accuracy)) +
+ggplot(results_grid, aes(x = ntree, y = Accuracy, color = factor(mtry))) +
   geom_line() + geom_point() +
-  labs(title = "Tuning de ntree", x = "Nombre d'arbres", y = "Accuracy") +
+  labs(title = "Joint Tuning of mtry and ntree", x = "ntree", y = "Accuracy", color = "mtry") +
   theme_minimal()
+ggsave("RF_pictures/mtry_ntree_lineplot.png")
 
-best_ntree <- results_ntree$ntree[which.max(results_ntree$Accuracy)]
+best_ntree <- results_grid$ntree[which.max(results_grid$Accuracy)]
+best_mtry <- results_grid$mtry[which.max(results_grid$Accuracy)]
 
 # Confirmation du résultat en regardant les erreurs
 set.seed(42)
 
-model <- randomForest(maintenance_status ~ ., data=marine_tr, ntrees = 1000, importance=TRUE)
+model <- randomForest(maintenance_status ~ ., data=marine_tr, ntree = 1000, importance=TRUE)
 
 model
 
@@ -72,7 +112,7 @@ oob.error.data <- data.frame(
 
 ggplot(data=oob.error.data, aes(x=Trees, y=Error)) +
   geom_line(aes(color=Type))
-# ggsave("oob_error_rate_500_trees.pdf")
+ggsave("RF_pictures/oob_error_rate_1000_trees.pdf")
 
 ## Green line = The error rate when classifying "Normal" maintenance status
 ##
@@ -82,41 +122,28 @@ ggplot(data=oob.error.data, aes(x=Trees, y=Error)) +
 ##
 ## Purple line = The error rate when classifying "Requires Maintenance" maintenance status
 # --> 300 trees optimal
-best_ntree <- 300
 
-################# mtrys optimal
+## nodesize & maxnodes optimal
 
-mtrys <- 1:(ncol(marine_tr) - 1)
-results_mtry <- data.frame()
-
-for (m in mtrys) {
-  model <- randomForest(maintenance_status ~ ., data = marine_tr, mtry = m, ntree = best_ntree)
-  acc <- mean(predict(model, marine_te) == marine_te$maintenance_status)
-  results_mtry <- rbind(results_mtry, data.frame(mtry = m, Accuracy = acc))
-}
-
-# 📈 Graph
-ggplot(results_mtry, aes(x = mtry, y = Accuracy)) +
-  geom_line() + geom_point() +
-  labs(title = "Tuning de mtry", x = "mtry", y = "Accuracy") +
-  theme_minimal()
-
-best_mtry <- results_mtry$mtry[which.max(results_mtry$Accuracy)]
-
-################# nodesize & maxnodes optimal
-
-nodesize_vals <- c(1, 3, 5, 10, 20)
-maxnodes_vals <- c(10, 20, 30, 50, 100)
 results_final <- data.frame()
+
+nodesize_vals <- c(1, 3, 5, 10, 15, 20)
+maxnodes_vals <- c(5, 10, 20, 30, 50)
 
 for (ns in nodesize_vals) {
   for (mx in maxnodes_vals) {
-    model <- randomForest(
-      maintenance_status ~ ., data = marine_tr,
-      ntree = best_ntree, mtry = best_mtry,
-      nodesize = ns, maxnodes = mx
+    model <- train(
+      maintenance_status ~ .,
+      data = marine_tr,
+      method = "rf",
+      trControl = ctrl,
+      tuneGrid = data.frame(mtry = best_mtry),  # Fix mtry
+      ntree = best_ntree,                       # Fix ntree
+      nodesize = ns,
+      maxnodes = mx
     )
-    acc <- mean(predict(model, marine_te) == marine_te$maintenance_status)
+    
+    acc <- max(model$results$Accuracy)
     results_final <- rbind(results_final, data.frame(nodesize = ns, maxnodes = mx, Accuracy = acc))
   }
 }
@@ -132,6 +159,7 @@ ggplot(results_final, aes(x = factor(nodesize), y = factor(maxnodes), fill = Acc
     y = "maxnodes"
   ) +
   theme_minimal()
+ggsave("RF_pictures/nodesize_maxnodes_tuning.png")
 
 best_nodesize <- results_final$nodesize[which.max(results_final$Accuracy)]
 best_maxnodes <- results_final$maxnodes[which.max(results_final$Accuracy)]
@@ -162,6 +190,40 @@ confusionMatrix(rf_preds_tr, marine_tr$maintenance_status)
 confusionMatrix(rf_preds_te, marine_te$maintenance_status)
 # Low overfitting
 
+################# Variable Importance
+
 # Extract variable importance
 varImpPlot(rf_model)
 importance(rf_model)
+
+# Set layout for 2 plots side by side
+par(mfrow = c(1, 2))
+
+# PDP for engine_load
+pdp_engine <- partial(
+  object = rf_model,
+  pred.var = "engine_load",
+  train = marine_tr,
+  which.class = "Requires Maintenance",
+  prob = TRUE
+)
+plot(pdp_engine,
+     type = "l",
+     main = "PDP: engine_load",
+     xlab = "Engine Load",
+     ylab = "Predicted Probability")
+
+# PDP for coolant_temp
+pdp_coolant <- partial(
+  object = rf_model,
+  pred.var = "coolant_temp",
+  train = marine_tr,
+  which.class = "Requires Maintenance",
+  prob = TRUE
+)
+
+plot(pdp_coolant,
+     type = "l",
+     main = "PDP: coolant_temp",
+     xlab = "Coolant Temperature",
+     ylab = "Predicted Probability")
