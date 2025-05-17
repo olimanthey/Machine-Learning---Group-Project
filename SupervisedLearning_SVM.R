@@ -88,7 +88,7 @@ svm_model_2 <- svm(
   train_x,
   train_y,
   kernel = "radial",
-  cost = 0.1,
+  cost = 1,
   sigma = 0.35
 )
 
@@ -108,7 +108,7 @@ svm_model_3 <- svm(
   train_y,
   kernel = "radial",
   cost = 1,
-  sigma = 0.01
+  gamma = 0.01
 )
 
 # Predict
@@ -150,3 +150,5 @@ plot(roc_requires, col = "green", add = TRUE)
 
 legend("bottomright", legend = c("Normal", "Critical", "Requires Maintenance"),
        col = c("blue", "red", "green"), lty = 1)
+
+#################### VARIABLES IMPORTANCE #####################

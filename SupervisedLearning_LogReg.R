@@ -4,7 +4,7 @@ library(dplyr)
 library(caret)
 library(nnet)
 library(ggplot2)
-
+library(reshape2)
 
 marine_db <- read.csv("marine_engine_data.csv")
 
@@ -101,3 +101,22 @@ confusionMatrix(baseline_preds_te_2, marine_te$maintenance_status)
 # linear assumptions of logistic regression are insufficient to capture the underlying patterns
 # in the data, motivating the use of more flexible models like Random Forest.
 
+################### VARIABLES IMPORTANCE PLOT ############
+importance <- varImp(baseline_model_2)
+plot(importance, top = 7)
+
+# Extract the model
+coef_matrix_log <- coef(baseline_model_2$finalModel)
+coef_dense <- as.matrix(coef_matrix_log)
+
+# Convert to long format
+coef_df <- melt(coef_dense)
+colnames(coef_df) <- c("Class", "Feature", "Coefficient")
+
+# Plot the graph
+ggplot(coef_df, aes(x = reorder(Feature, abs(Coefficient)), y = Coefficient, fill = Class)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  labs(title = "Feature Coefficients by Class (MLR)",
+       x = "Feature", y = "Coefficient") +
+  theme_minimal()
