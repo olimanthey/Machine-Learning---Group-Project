@@ -25,28 +25,36 @@ for (i in 1:ncol(marine_db)) {
 
 ########## SUPPORT VECTOR MACHINE ############
 
-# Prepare data
-features <- marine_db %>%
-  select(engine_temp, coolant_temp, engine_load, rpm,
-         vibration_level, fuel_consumption, running_period)
 
-labels <- marine_db$maintenance_status
+# Delete unwanted columns
+svm_db <- marine_db %>%
+  select(-timestamp, -engine_id)
 
-# Encode labels as factor
-labels <- as.factor(labels)
+# Delete columns that where not meaningful after EDA
+svm_db <- svm_db %>%
+  select(-failure_mode, -engine_type, -manufacturer, -fuel_type, 
+         -fuel_consumption_per_hour, -exhaust_temp, -oil_pressure)
+
+# Define maintenance status as factor
+svm_db$maintenance_status <- as.factor(svm_db$maintenance_status)
+
+
+# Train/Test Split
+set.seed(123)
+trainIndex <- createDataPartition(svm_db$maintenance_status, p = 0.8, list = FALSE)
+marine_tr <- svm_db[trainIndex, ]
+marine_te  <- svm_db[-trainIndex, ]
 
 # Scale features to normalize them
-scaled_features <- scale(features)
+train_x <- scale(marine_tr[, 0:7])
+train_y <- marine_tr$maintenance_status
+test_x <- scale(marine_te[, 0:7])
+test_y <- marine_te$maintenance_status
 
-# Train/test split
-set.seed(242)
-train_index <- createDataPartition(labels, p = 0.8, list = FALSE)
-train_x <- scaled_features[train_index, ]
-test_x  <- scaled_features[-train_index, ]
-train_y <- labels[train_index]
-test_y  <- labels[-train_index]
 
+################### SVM MODEL 1 ##########################
 # Train SVM
+set.seed(123)
 svm_model_1 <- svm(train_x, y = train_y, kernel = "radial", cost = 1, gamma = 0.1)
 
 # Predict
@@ -78,18 +86,18 @@ svm_model_cv <- train(
   preProcess = NULL
 )
 
-svm_model_cv # sigma = 0.35 C = 0.1
+svm_model_cv # sigma = 0.01 C = 10
 plot(svm_model_cv)
-svm_model_cv$bestTune # sigma = 0.35, C = 0.1
+svm_model_cv$bestTune # sigma = 0.01, C = 10
 
 ######## Test the model with the new best parameters
-set.seed(242)
+set.seed(123)
 svm_model_2 <- svm(
   train_x,
   train_y,
   kernel = "radial",
-  cost = 1,
-  sigma = 0.35
+  cost = 10,
+  sigma = 0.01
 )
 
 # Predict
@@ -102,13 +110,13 @@ confusionMatrix(test_pred_2, test_y)
 
 
 ####### Test a third mode with the second best parameteres
-set.seed(242)
+set.seed(123)
 svm_model_3 <- svm(
   train_x,
   train_y,
   kernel = "radial",
   cost = 1,
-  gamma = 0.01
+  sigma = 0.001
 )
 
 # Predict
@@ -119,36 +127,45 @@ test_pred_3 <- predict(svm_model_3, newdata = test_x)
 confusionMatrix(train_pred_3, train_y)
 confusionMatrix(test_pred_3, test_y)
 
-########### ROC Curve ##################
-
-# Train the best model with probabilities
-set.seed(242)
-
-svm_best_model <- svm(
+####### Test a fourth mode with the second best parameteres
+set.seed(123)
+svm_model_4 <- svm(
   train_x,
   train_y,
   kernel = "radial",
-  cost= 0.1,
-  gamma = 0.35,
-  probability = TRUE
+  cost = 0.1,
+  sigma = 0.35
 )
 
-# Predict probabilities on the test set
-svm_prob <- predict(svm_best_model, test_x, probability = TRUE)
-svm_prob <- attr(svm_prob, "probabilities")
+# Predict
+train_pred_4 <- predict(svm_model_4, newdata = train_x)
+test_pred_4 <- predict(svm_model_4, newdata = test_x)
 
-# One - vs- Rest ROC curves
-roc_normal <- roc(test_y == "Normal", svm_prob[, "Normal"])
-plot(roc_normal, col = "blue", main = "One vs Rests ROC Curves")
+# Evaluate
+confusionMatrix(train_pred_4, train_y)
+confusionMatrix(test_pred_4, test_y)
 
-# Add other class
-roc_critical <- roc(test_y == "Critical", svm_prob[, "Critical"])
-plot(roc_critical, col = "red", add = TRUE)
+########### VARIABLE IMPORTANCE ##############
+# Test the variable importance with the model 3 (C = 1, Sigma = 0.001)
+library(iml)
 
-roc_requires <- roc(test_y == "Requires Maintenance", svm_prob[, "Requires Maintenance"])
-plot(roc_requires, col = "green", add = TRUE)
+# Combine scaled features and labels into one dataframe
+train_data <- as.data.frame(train_x)
+train_data$maintenance_status <- train_y
 
-legend("bottomright", legend = c("Normal", "Critical", "Requires Maintenance"),
-       col = c("blue", "red", "green"), lty = 1)
+# Define prediction wrapper (iml expects probability output)
+predictor <- Predictor$new(
+  model = svm_model_3,
+  data = train_data[, -ncol(train_data)],
+  y = train_data$maintenance_status,
+  type = "response"
+)
 
-#################### VARIABLES IMPORTANCE #####################
+# Compute feature importance
+imp <- FeatureImp$new(predictor, loss = "ce")  # ce = cross-entropy
+
+# Plot importance
+plot(imp) + ggtitle("Variable Importance (SVM)") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+
+
+
