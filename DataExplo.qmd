@@ -68,51 +68,6 @@ db_sum <- dfSummary(marine_db, max.distinct.values = 5)
 db_sum %>% View()
 ```
 
-## Numerical variables
-
-| Variable | Key Findings |
-|------------------------------------|------------------------------------|
-| `engine_temp` | Well-distributed (Mean: 85.1, SD: 7.2). No concerns. |
-| `oil_pressure` | Skewed slightly right. Wide spread, many distinct values. |
-| `fuel_consumption` | Very high variability (SD: 2439.4) → possible outliers or skew. |
-| `vibration_level` | Clean, narrow distribution. |
-| `rpm` | Wide range (732 to 2205). CV = 0.1 → reasonably stable. |
-| `engine_load` | CV = 0.3 → some variation, likely useful. |
-| `coolant_temp` | CV = 0.1 → good spread. |
-| `exhaust_temp` | Almost constant (IQR = 0, 162 unique values) → ⚠️ not informative. |
-| `running_period` | High CV (1.0) → consider transformation. |
-| `fuel_consumption_per_hour` | Very low variance (Mean = 100 for all) → ❌ likely useless. |
-
-## Categorical variables
-
-| Variable | Key Observations |
-|------------------------------------|------------------------------------|
-| `maintenance_status` | Balanced across 3 classes (\~33% each) → ✅ ideal for classification. |
-| `failure_mode` | Spread across 4 modes, no dominant class → ✅ predictive potential. |
-| `engine_type` | Fairly balanced among 4 types. |
-| `fuel_type` | Slight imbalance: Diesel (59%) vs HFO (41%). |
-| `manufacturer` | Most common: MAN B&W (30%), rest evenly spread. |
-
-## Date variable
-
--   `timestamp`: Weekly granularity
-
--   Range: **2023-01-01** to **2024-12-22** (almost 2 years)
-
-## Recommendations
-
--   Drop or exclude:
-
-    -   `fuel_consumption_per_hour` (constant)
-
-    -   `exhaust_temp` (low variation)
-
--   Scale/transform:
-
-    -   `fuel_consumption`, `rpm`, `running_period`
-
--   Balanced classification target (`maintenance_status`) → good foundation for modeling
-
 ## Target variable (Y) distribution
 
 ```{r}
@@ -145,9 +100,9 @@ final_barplot <- ggplot(maintenance_counts, aes(x = maintenance_status, y = n, f
     panel.grid.minor = element_blank(),
     legend.position = "none"
   )
-
+final_barplot
 # Save as PNG
-ggsave("maintenance_status_distr.png", plot = final_barplot, width = 6, height = 4, dpi = 300)
+#ggsave("maintenance_status_distr.png", plot = final_barplot, width = 6, height = 4, dpi = 300)
 ```
 
 # 2. Bivariate analysis
@@ -196,74 +151,222 @@ final_plot <- main_plot +
 final_plot
 
 # Save as PNG
-ggsave("Distribution_num_var.png", plot = final_plot, width = 6, height = 4, dpi = 300)
+#ggsave("Distribution_num_var.png", plot = final_plot, width = 6, height = 4, dpi = 300)
 ```
 
-`engine_temp`
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p1 <- ggplot(marine_db, aes(x = engine_temp, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Engine Temperature by Maintenance Status",
+       title.position = "middle",
+       x = "Engine Temperature",
+       y = "Count",
+       fill = "Maintenance Status")
+```
 
--   Appears **normally distributed**, centered around 85°C.
--   **Critical engines** show slightly **higher temperatures** than normal or maintenance-required ones.
--   Suggests **overheating may correlate with severe maintenance conditions**.
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p2 <-ggplot(marine_db, aes(x = oil_pressure, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Oil Pressure by Maintenance Status",
+       title.position = "middle",
+       x = "Oil Pressure",
+       y = NULL,
+       fill = "Maintenance Status")
 
-`oil_pressure`
+p1_p2 <- (p1 + p2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
--   Left-skewed with a **strong peak at 8 bars**, possibly indicating a **sensor cap or upper limit**.
--   All maintenance statuses are concentrated at 8 bars → **low variation** at the top.
--   Consider **binning or checking for measurement saturation**.
+ggsave("p1_p2.png", width = 10, height = 6, dpi = 300)
+```
 
-`fuel_consumption`
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p3 <- ggplot(marine_db, aes(x = fuel_consumption, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Fuel Consumption by Maintenance Status",
+       title.position = "middle",
+       x = "Fuel Consumption",
+       y = "Count",
+       fill = "Maintenance Status")
+```
 
--   Strongly **right-skewed** distribution.
--   Higher values are more frequent in **Critical status**.
--   Implies a possible link between **fuel consumption and engine stress/failure**.
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p4 <- ggplot(marine_db, aes(x = vibration_level, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Vibration Level by Maintenance Status",
+       title.position = "middle",
+       x = "Vibration Level",
+       y = NULL,
+       fill = "Maintenance Status")
+```
 
-`vibration_level`
+```{r}
+p3_p4 <- (p3 + p4) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
--   **Bell-shaped distribution** with a slight right skew.
--   Critical and Requires Maintenance statuses are more common at **higher vibration levels**.
--   Suggests **vibration is a strong indicator of engine condition**.
+ggsave("EDA/p3_p4.png", width = 10, height = 6, dpi = 300)
+```
 
-`rpm`
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p5 <- ggplot(marine_db, aes(x = rpm, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "RPM by Maintenance Status",
+       title.position = "middle",
+       x = "RPM",
+       y = "Count",
+       fill = "Maintenance Status")
+```
 
--   Symmetric, centered around \~1500 RPM.
--   **Critical engines** show higher counts at upper RPM levels.
--   Indicates **high engine speed may be linked to mechanical wear or risk**.
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p6 <- ggplot(marine_db, aes(x = engine_load, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Engine Load by Maintenance Status",
+       title.position = "middle",
+       x = "Engine Load",
+       y = NULL,
+       fill = "Maintenance Status")
+```
 
-`engine_load`
+```{r}
+p5_p6 <- (p5 + p6) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
--   Fairly **uniform distribution**.
--   No meaningful separation by maintenance status.
--   Likely **not a strong predictor** when used alone.
+ggsave("EDA/p5_p6.png", width = 10, height = 6, dpi = 300)
+```
 
-`coolant_temp`
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p7 <- ggplot(marine_db, aes(x = coolant_temp, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Coolant Temperature by Maintenance Status",
+       title.position = "middle",
+       x = "Coolant Temperature",
+       y = "Count",
+       fill = "Maintenance Status")
+```
 
--   Slightly **bimodal and right-skewed**.
--   Critical status appears more frequently at **higher temperatures**.
--   Suggests **thermal stress may be relevant to engine failure**.
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p8 <- ggplot(marine_db, aes(x = exhaust_temp, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Exhaust Temperature by Maintenance Status",
+       title.position = "middle",
+       x = "Exhaust Temperature",
+       y = NULL,
+       fill = "Maintenance Status")
+```
 
-`exhaust_temp`
+```{r}
+p7_p8 <- (p7 + p8) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
--   Almost all values are **locked at 450°C**.
--   Very low variability suggests a **capped or default value**.
--   Likely **not useful for modeling**.
+ggsave("EDA/p7_p8.png", width = 10, height = 6, dpi = 300)
+```
 
-`running_period`
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p9 <- ggplot(marine_db, aes(x = running_period, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Running Period by Maintenance Status",
+       title.position = "middle",
+       x = "Running Period",
+       y = "Count",
+       fill = "Maintenance Status")
+```
 
--   Flat, uniform-like spread across 0–170 hours.
--   No clear separation by maintenance status.
--   Might be useful **in combination with other time-based metrics**.
+```{r}
+# Generate each plot with reduced title size and simpler styling
+p10 <- ggplot(marine_db, aes(x = fuel_consumption_per_hour, fill = maintenance_status)) +
+    geom_histogram(position = "stack", bins = 30, alpha = 1) +
+    facet_wrap(~maintenance_status) +
+    theme_minimal(base_size = 7)  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 10, hjust = 0.5)  # Center the title
+  ) +
+  labs(title = "Fuel Consumption Per Hour by Maintenance Status",
+       title.position = "middle",
+       x = "Fuel Consumption Per Hour",
+       y = NULL,
+       fill = "Maintenance Status")
+```
 
-`fuel_consumption_per_hour`
+```{r}
+p9_p10 <- (p9 + p10) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
--   Almost completely **flat at 100 units/hour**.
--   Extremely **low variance** across all categories.
--   Should be **excluded** from modeling or feature engineering.
+ggsave("EDA/p9_p10.png", width = 10, height = 6, dpi = 300)
+```
 
 ### Key Takeaways
 
--   **Useful features**: `engine_temp`, `vibration_level`, `rpm`, `coolant_temp`
--   **Neutral/less useful**: `engine_load`, `running_period`
--   **Likely drop**: `exhaust_temp`, `fuel_consumption_per_hour`, possibly `oil_pressure`
+-   Useful features: `engine_temp`, `vibration_level`, `rpm`, `coolant_temp`
+-   Neutral/less useful: `engine_load`, `running_period`
+-   Likely drop: `exhaust_temp`, `fuel_consumption_per_hour`, possibly `oil_pressure`
 
 ## Categorical Distributions by Maintenance Status
 
@@ -312,36 +415,11 @@ print(final_plot)
 ggsave("Distribution_cat_var.png", plot = final_plot, width = 6, height = 4, dpi = 300)
 ```
 
-`failure_mode`
-
--   All failure modes are relatively balanced.
--   **Oil Leakage** is the most common and is slightly more associated with the **Critical** and **Requires Maintenance** statuses.
--   **No Failure** has the lowest counts, as expected, and appears more often in the **Normal** group.
--   This variable provides meaningful differentiation and is likely useful for modeling.
-
-`engine_type`
-
--   Fair distribution across engine types.
--   **4-stroke High-Speed** and **2-stroke Medium-Speed** engines are more frequent overall.
--   Maintenance status is evenly distributed across engine types, suggesting it **may not strongly predict failure on its own** but could interact well with other variables.
-
-`fuel_type`
-
--   **Diesel engines** dominate the dataset (\~60%) over **HFO** (\~40%).
--   The distribution of maintenance status is similar across fuel types, suggesting **no strong direct relationship**.
--   May still be useful when combined with engine type or manufacturer.
-
-`manufacturer`
-
--   **MAN B&W** and **Yanmar** engines are the most common.
--   Some manufacturers (e.g., **Mitsubishi**, **Caterpillar**) show more **Normal** status, while others like **MAN B&W** lean more toward **Requires Maintenance** and **Critical**.
--   Manufacturer may contribute valuable signal in classification when combined with operational metrics.
-
 ### Key Takeaways
 
--   **Useful features**: `failure_mode`, `manufacturer`
--   **Potentially helpful when combined**: `engine_type`, `fuel_type`
--   **No immediate red flags** — all categories show sufficient class balance for modeling
+-   Useful features: `failure_mode`, `manufacturer`
+-   Potentially helpful when combined: `engine_type`, `fuel_type`
+-   No immediate red flags — all categories show sufficient class balance for modeling
 
 # 3. Correlation heat-map
 
@@ -373,41 +451,17 @@ heatmap <- ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
 ggsave("correlation_heat_map.png", plot = heatmap, width = 6, height = 4, dpi = 300)
 ```
 
-Strong Positive Correlations
-
--   **`engine_temp` and `coolant_temp`** (r = **0.92**): A strong linear relationship indicating that as engine temperature rises, coolant temperature rises as well — both could serve as indicators of engine strain or thermal performance.
-
--   **`engine_temp` and `engine_load`** (r = **0.72**): Higher engine temperatures are associated with higher engine loads, suggesting engines under greater stress tend to heat up.
-
--   **`fuel_consumption` and `running_period`** (r = **0.75**): Longer running periods are naturally linked with greater total fuel consumption — this is expected and highlights potential redundancy.
-
--   **`oil_pressure` and `engine_load`** (r = **0.83**): Strong relationship showing that oil pressure increases with engine load, reflecting standard mechanical behavior.
-
-Moderate Correlations
-
--   **`vibration_level` with `engine_load`** (r = **0.48**) and **`oil_pressure`** (r = **0.40**): Vibration may increase under higher pressure/load, but not as strongly as thermal or fuel-based metrics.
-
--   **`engine_temp` and `fuel_consumption`** (r = **0.35**): Warmer engines tend to consume more fuel, though this relationship is moderate.
-
-Weak or No Correlation
-
--   **`rpm`** shows **negligible correlation** with almost all variables, suggesting it may vary independently or isn't well-aligned with broader patterns in the dataset.
-
--   **`fuel_consumption_per_hour`** has **low or negative correlations** with several variables (e.g., -0.2 with `fuel_consumption`, `running_period`), indicating it’s either poorly measured or not varying meaningfully — possibly a candidate for removal.
-
--   **`exhaust_temp`** has near-zero correlations with most features, consistent with earlier EDA indicating it's a nearly constant or capped value (likely not useful).
-
 ### Key Takeaways
 
--   Features like `engine_temp`, `coolant_temp`, `engine_load`, and `oil_pressure` show **strong internal consistency** and could serve as reliable predictors.
--   `fuel_consumption_per_hour` and `exhaust_temp` are likely **uninformative** and may be removed or deprioritized.
--   Use caution with `rpm` — although it may be operationally important, it's **statistically isolated** in this dataset.
+-   Features like `engine_temp`, `coolant_temp`, `engine_load`, and `oil_pressure` show strong internal consistency and could serve as reliable predictors.
+-   `fuel_consumption_per_hour` and `exhaust_temp` are likely uninformative and may be removed or deprioritized.
+-   Use caution with `rpm` — although it may be operationally important, it's statistically isolated in this dataset.
 
 # 4. Outliers
 
 ## **Use IQR Method (Univariate)**
 
-For each **numerical variable**, flag points that fall outside:
+For each numerical variable, flag points that fall outside:
 
 -   `fuel_consumption:` IQR (CV) : 3699 (0.6)
 
@@ -455,10 +509,6 @@ p1 + p2
 
 ```
 
--   **Fuel Consumption**: Distributions are relatively similar across groups, but all categories exhibit numerous outliers on the upper end. This suggests that high fuel use is present in all statuses, making it less useful for distinguishing maintenance needs on its own.
-
--   **RPM**: Median RPM appears slightly higher for engines that **require maintenance**, with more upper and lower outliers in the **Critical** category. This could indicate that engines under stress fluctuate more in RPM, potentially contributing to degradation.
-
 ```{r}
 # Define a reusable theme
 box_theme <- theme_minimal(base_size = 11) +
@@ -492,14 +542,6 @@ p4 <- ggplot(marine_db, aes(x = maintenance_status, y = engine_temp, fill = main
 p1 + p2 + p3 + p4
 ```
 
--   **Running Period**: No meaningful differences across categories. This suggests total operational time is not strongly linked with current maintenance condition.
-
--   **Engine Load**: Slightly higher variability in the **Critical** group, but distributions are generally overlapping. Load alone may not be a strong predictor.
-
--   **Coolant Temperature**: Distributions are very similar across all statuses, with slightly elevated values in the **Critical** group. Useful when combined with other thermal variables.
-
--   **Engine Temperature**: More lower-end outliers appear in the **Critical** category. This variable shows clearer separation and may provide predictive value, especially in detecting undercooled or overcooled engines.
-
 ```{r}
 # Reusable theme
 box_theme <- theme_minimal(base_size = 11) +
@@ -532,14 +574,6 @@ p4 <- ggplot(marine_db, aes(x = maintenance_status, y = exhaust_temp, fill = mai
 # Combine in one row
 p1 + p2 + p3 + p4
 ```
-
--   **Oil Pressure**: Values are highly concentrated between 7–8 bar across all groups, with minimal separation. May provide limited predictive value unless combined with other variables like load or temperature.
-
--   **Vibration Level**: Shows mild variability. Slightly higher levels are observed in the **Critical** group, suggesting it may help detect abnormal mechanical behavior. Not a strong standalone feature, but potentially useful when combined with others.
-
--   **Fuel Consumption per Hour**: Displays almost no internal variability — most values are flat at 100, with a few extreme outliers. Likely a capped or synthetic value. **Recommended for removal.**
-
--   **Exhaust Temperature**: Nearly all values are fixed at 450°C. This strongly suggests a sensor ceiling or constant default. Offers no meaningful distribution and **should be excluded from analysis.**
 
 ## Summarize Outliers Programmatically
 
@@ -584,28 +618,3 @@ marine_db$outlier_flag <- ifelse(distances > threshold, "Outlier", "Inlier")
 # Step 6 (Optional): View a summary
 table(marine_db$outlier_flag)
 ```
-
-# 5. Conclusion & Further Steps
-
-**Summary of EDA Findings**
-
--   The dataset includes **no missing values**, is balanced across maintenance classes, and contains both informative and redundant features.
--   **Strong variable relationships**:
-    -   `engine_temp`, `coolant_temp`, and `engine_load` are positively correlated and likely represent engine thermal stress.
-    -   `fuel_consumption` is strongly related to `running_period`, confirming expected operational behavior.
--   **Outliers** are present in key variables like `fuel_consumption`, `rpm`, and `vibration_level`, particularly in the **Critical** category — potentially useful for failure prediction.
--   Some variables (e.g., `fuel_consumption_per_hour`, `exhaust_temp`) show **zero or near-zero variance**, offering **no predictive value**.
--   Categorical features like `failure_mode`, `manufacturer`, and `engine_type` show **distribution shifts** across maintenance statuses and could enhance model interpretability.
-
-**Next Steps**
-
-1.  **Feature Selection & Reduction**
-    -   Drop constant or low-variance variables: `fuel_consumption_per_hour`, `exhaust_temp`
-    -   Consider removing `engine_id` and `tempstamp`(non-informative)
-    -   Transform categorical variables for one-hot encoding or target encoding
-    -   See how features behave with one another
-2.  **Outlier Strategy**
-    -   Retain meaningful outliers in `vibration_level` and `engine_temp` (potential early warning signs)
-    -   Consider log transformation for skewed variables like `fuel_consumption`
-3.  **Modeling**
-    -   Consider unsupervised learning.
