@@ -11,7 +11,7 @@ How can machine learning models predict early signs of maintenance needs in mari
 
 **File Structure**
 
-In the following repository you will :
+In the following repository you will find:
 
   - marine_engine_data.csv : weekly time series of simulated data collected during the operation of 50 marine engines totalizing 5200 instances (data use during the entire project)
   - DataExplo.qmd : Exploratory Data Analysis of our dataset
