@@ -10,7 +10,9 @@ and Support Vector Machines (SVM). The central research question guiding this pr
 How can machine learning models predict early signs of maintenance needs in marine engines using engine performance metrics, operational conditions, and failure modes data?
 
 **File Structure**
+
 In the following repository you will :
+
   - marine_engine_data.csv : weekly time series of simulated data collected during the operation of 50 marine engines totalizing 5200 instances (data use during the entire project)
   - DataExplo.qmd : Exploratory Data Analysis of our dataset
   - UnsupLearning_clust.R : Unsupervised Clustering analysis of the main features
