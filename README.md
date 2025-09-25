@@ -21,3 +21,5 @@ In the following repository you will find:
   - SupervisedLearning_RF.R : Random Forest modeling
   - SupervisedLearning_SVM.R : Support Vector Machine modeling
   - models_comparison.R : Comparison between the 3 models that we have constructed
+  - Group_D.pdf : Final study report
+  - Group_D_presentation_slides.pdf : Presentation report of the study
